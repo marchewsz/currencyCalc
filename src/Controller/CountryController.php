@@ -1,0 +1,120 @@
+<?php
+
+namespace App\Controller;
+
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Routing\Annotation\Route;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Response;
+use Exception;
+
+
+class CountryController extends AbstractController
+{
+    /**
+     * @Route("/", name="country")
+     */
+    public function index()
+    {
+        $code = "?";
+        $pln_amount = "";
+        $capital_name = "";
+        $foreign_amount = "X";
+        if(!empty($_POST['capitalCity']) && !empty($_POST['plnAmount'])){          
+            $capital_name = $_POST['capitalCity'];
+            $pln_amount = $_POST['plnAmount'];
+            $currencyData = $this->byCapitalCity($capital_name);
+            if($currencyData != "ERROR"){
+                $code = $currencyData[0]['currencies'][0]['code'];
+                $foreign_amount = $this->calculateCurrency($code, $pln_amount);
+            }else{
+                $code = "";
+            }
+        }
+        return $this->render('country/index.html.twig', [
+            'currency_code' => $code,
+            'capital_name' => $capital_name,
+            'pln_amount' => $pln_amount,
+            'foreign_amount' => $foreign_amount,
+            'controller_name' => 'CountryController',
+        ]);
+    }
+    
+    private $guzzleClient;
+    private $fields;
+    
+    public function __construct()
+    {
+        $this->guzzleClient = new Client([
+            "base_uri" => "https://restcountries.eu/rest/v2/",
+        ]);
+        $this->fields = [];
+    }
+    
+     public function fields(array $fields)
+    {
+        $this->fields = $fields;
+        return $this;
+    }
+    
+    public function byCapitalCity($capitalCity)
+    {
+        $url = sprintf("capital/%s?fields=currencies", $capitalCity);        
+        return $this->execute($url);
+    }
+    
+    
+    private function execute($url, $requestParams = [])
+    {
+        if (count($this->fields)) {
+            $requestParams = array_merge($requestParams, [
+                "fields" => implode(";", $this->fields),
+            ]);
+            $this->fields = [];
+        }
+        try {
+            $response = $this->guzzleClient->get($url, [
+                "query" => $requestParams,
+            ])->getBody()->getContents();
+            return json_decode($response, true);
+        } catch (Exception $exception) {
+            if($exception->getCode() == '404'){
+                return 'ERROR';
+            }else{
+            throw new Exception($exception->getMessage());
+            }
+        }
+    }
+    
+    private function calculateCurrency($currencyCode , $amountToConvert){
+        // set API Endpoint, access key, required parameters
+        $endpoint = 'live';
+        $access_key = 'e0be2dcc7789103833a32aa33c777ed6';
+
+        $from = 'PLN';
+        $to = $currencyCode;
+        $amount = $amountToConvert;
+
+        // initialize CURL:
+        $ch = curl_init('http://apilayer.net/api/'.$endpoint.'?access_key='.$access_key.'&currencies='.$from.','.$to.'&format=1');   
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // get the (still encoded) JSON data:
+        $json = curl_exec($ch);
+        curl_close($ch);
+
+        // Decode JSON response:
+        $conversionResult = json_decode($json, true);
+        $keys = array_keys($conversionResult['quotes']);
+        
+        //Wartość 1 USD w PLN
+        $valueOfPLN = $conversionResult['quotes'][$keys[0]];
+        //Wartość 1 USD w jednostkach wybranej waluty
+        $valueOfForeign = $value = $conversionResult['quotes'][$keys[1]];
+        //Suma posiadanych USD razy wartość wybranej waluty
+        $result = ($amount / $valueOfPLN) * $valueOfForeign;
+        
+        return number_format($result, 2, '.','');
+    }
+}

@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+{% block title %}Prosta aplikacja webowa{% endblock %}
+{% block body %}
+    <div class="content">
+    <form method="GET">
+        <label for = "capitalCity">Wprowadź stolicę</label>
+        <input type="text" name = "capitalCity"> 
+        <input type="submit" value="Szukaj">
+    </form>
+    </div>
+{% endblock %}
