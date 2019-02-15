@@ -8,7 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use Exception;
-
+use App\Entity\Record;
+use DateTime;
 
 class CountryController extends AbstractController
 {
@@ -18,19 +19,27 @@ class CountryController extends AbstractController
     public function index()
     {
         $code = "?";
-        $pln_amount = "";
-        $capital_name = "";
-        $foreign_amount = "X";
+        $msg='';
+        $pln_amount = $capital_name = $foreign_amount = "";
         if(!empty($_POST['capitalCity']) && !empty($_POST['plnAmount'])){          
             $capital_name = $_POST['capitalCity'];
             $pln_amount = $_POST['plnAmount'];
-            $currencyData = $this->byCapitalCity($capital_name);
-            if($currencyData != "ERROR"){
+            try{
+                $currencyData = $this->byCapitalCity($capital_name);
                 $code = $currencyData[0]['currencies'][0]['code'];
                 $foreign_amount = $this->calculateCurrency($code, $pln_amount);
-            }else{
-                $code = "";
+            } catch (Exception $ex) {
+                $msg = "Wystąpił problem ze znalezieniem pożądanego miasta";
+                return $this->render('country/index.html.twig', [
+                'currency_code' => $code,
+                'capital_name' => $capital_name,
+                'pln_amount' => $pln_amount,
+                'message' => $msg, 
+                ]);
             }
+            $this->saveRecord($pln_amount, $foreign_amount, $code, $capital_name);
+            
+            
         }
         return $this->render('country/index.html.twig', [
             'currency_code' => $code,
@@ -86,6 +95,28 @@ class CountryController extends AbstractController
             }
         }
     }
+    private function saveRecord($pln_value,$foreign_value, $foreign_currency_code, $city){
+        try{
+            $entityManager = $this->getDoctrine()->getManager();
+            $record = new Record();
+            $record->setPlnValue($pln_value);
+            $record->setCity($city);
+            $record->setForeignCurrencyCode($foreign_currency_code);
+            $record->setForeignValue($foreign_value);
+            $datetime1 = new DateTime(date('Y-m-d h:m:s'));
+            $record->setGenerationDate($datetime1);
+            echo "<pre>";
+            print_r($record);
+            echo "</pre>";
+            $entityManager->persist($record);
+            $entityManager->flush();
+            return true;
+        } catch (Exception $ex) {
+            echo $ex->getMessage();
+            return false;
+        }
+    }
+    
     
     private function calculateCurrency($currencyCode , $amountToConvert){
         // set API Endpoint, access key, required parameters

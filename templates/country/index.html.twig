@@ -8,11 +8,14 @@
     .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
 </style>
 <header class="container header">
-    <h1> Prosta aplikacja webowa </h1>
+    <a href="/"><h1> Prosta aplikacja webowa </h1></a>
 </header>
 <main>    
 <div class="container">
-    <form class="form" method="POST" class='form-inline' >
+    {% if message is defined %}
+    <div class=" alert alert-danger"> {{ message | default('') }}  </div>
+    {% endif %}
+    <form class="form" method="POST" action="/" class='form-inline' >
         
             <label for = "capitalCity">Wprowadź nazwę stolicy:</label>
             <input class='form-control' type="text" id="capitalCity" name = "capitalCity" required value="{{ capital_name | default('') }}"/> <br/>
@@ -20,12 +23,32 @@
             <label for ="plnAmount" > Podaj kwotę w PLN: </label>
             <input class='form-control' type = "number" id="plnAmount" name="plnAmount" required value ="{{ pln_amount | default('') }}"/> <br/>
         
-        <input class="btn btn-info" onclick="loadDoc()" type="submit" value="Szukaj">
+        <input class="btn btn-info" type="submit" value="Szukaj">
     </form>
             <hr/>
     <div id="result">
         <p> Przeliczasz: {{ pln_amount | default('') }} PLN na {{  currency_code | default('') }} </p>
-        <p> {{ 'Pieniądze do dyspozycji:' | default('') }}  {{ foreign_amount | default('') }}{{  currency_code | default('') }} </p>
+        <p> {{ 'Pieniądze do dyspozycji:' | default('') }}  {{ foreign_amount | default('') }} {{  currency_code | default('') }} </p>
+        <a class="btn btn-info" href="/records" > Pokaż historię </a>
+        {% if table is defined %}
+        <table class="table">
+            <tr>
+                <th>Id</th>
+                <th>Stolica</th>
+                <th>Wartość w PLN</th>
+                <th>Wartość w walucie</th>
+                <th>Waluta</th>
+                <th>Czas generacji</th>
+            </tr>
+        {% for row in table %}
+            <tr>
+                {% for column in row %}
+                    <td>{{ column }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
     </div>
 </div>
 </main>
