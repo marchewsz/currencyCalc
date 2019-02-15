@@ -105,9 +105,6 @@ class CountryController extends AbstractController
             $record->setForeignValue($foreign_value);
             $datetime1 = new DateTime(date('Y-m-d h:m:s'));
             $record->setGenerationDate($datetime1);
-            echo "<pre>";
-            print_r($record);
-            echo "</pre>";
             $entityManager->persist($record);
             $entityManager->flush();
             return true;
